@@ -29,15 +29,31 @@ jobs:
           java-version: 17
 
     
+      
       - name: Install dependencies
         run: |
           npm install
           npm install @capacitor/android@^6.2.0
-          pwd
-          ls -la
-          ls -la www
+          mkdir -p www
+          cat > www/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="my">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>P&C Game Shop</title>
+          </head>
+          <body style="background:#101827;color:white;text-align:center;padding:40px;font-family:Arial">
+            <h1 style="color:#38bdf8">P&C Game Shop</h1>
+            <h2>Game Top-up Shop</h2>
+            <p>မင်္ဂလာပါ။ P&C Game Shop မှ ကြိုဆိုပါတယ်။</p>
+            <p>Game Top-up ဝန်ဆောင်မှုများကို ရရှိနိုင်ပါပြီ။</p>
+          </body>
+          </html>
+          EOF
           npx cap add android
           npx cap sync android
+
 
       - name: Build debug APK
         run: |
