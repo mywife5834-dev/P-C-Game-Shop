@@ -16,11 +16,14 @@ h1{margin:0}
 label{display:block;margin:12px 0 6px}
 input,select,button{width:100%;padding:13px;border-radius:9px;font-size:16px;margin-bottom:8px}
 input,select{background:#0f172a;color:white;border:1px solid #475569}
-button{background:#db2777;color:white;border:0;font-weight:bold}
+button{background:#db2777;color:white;border:0;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5}
-.order{background:#263449;padding:12px;border-radius:10px;margin:10px 0}
+.order{background:#263449;padding:12px;border-radius:10px;margin:10px 0;overflow-wrap:anywhere}
 small{color:#cbd5e1}
 .notice{color:#fbbf24;font-size:13px}
+.price{font-size:23px;color:#4ade80;font-weight:bold;margin:15px 0}
+.adminPanel{display:none}
+hr{border:0;border-top:1px solid #475569;margin:18px 0}
 </style>
 </head>
 <body>
@@ -30,40 +33,56 @@ small{color:#cbd5e1}
 </header>
 
 <main class="wrap">
+
 <section class="card">
 <h2>Game Top-up Order</h2>
 <form id="orderForm">
+
 <label>ဂိမ်းအမျိုးအစား</label>
 <select id="game">
-<option>Mobile Legends</option>
-<option>PUBG Mobile</option>
-<option>Free Fire</option>
+<option value="Mobile Legends">Mobile Legends</option>
+<option value="PUBG Mobile">PUBG Mobile</option>
+<option value="Free Fire">Free Fire</option>
 </select>
+
 <label>Player ID</label>
 <input id="player" required placeholder="Player ID">
+
 <label>Server ID</label>
 <input id="server" placeholder="Server ID">
-<label>Top-up Package</label>
-<select id="pack">
-<option>အသေးစား Package</option>
-<option>အလတ်စား Package</option>
-<option>အကြီးစား Package</option>
-</select>
+
+<label>Package ရွေးချယ်ရန်</label>
+<select id="pack"></select>
+
+<label>စိတ်ကြိုက် ပမာဏ</label>
+<input id="quantity" type="number" min="1" step="1"
+placeholder="ဥပမာ - 100">
+
+<small id="unitText"></small>
+
+<div class="price">
+ကျသင့်ငွေ — <span id="totalPrice">0</span> ကျပ်
+</div>
+
 <label>ဆက်သွယ်ရန် ဖုန်းနံပါတ်</label>
 <input id="phone" required inputmode="tel" placeholder="09xxxxxxxxx">
+
 <label>ငွေပေးချေမှု</label>
 <select id="pay">
 <option>KBZPay</option>
 <option>WavePay</option>
 </select>
+
 <div class="card">
 <strong>ငွေလွှဲရန် အကောင့်</strong>
 <p id="paymentName"></p>
 <p id="paymentNumber"></p>
 <small>ငွေလွှဲပြီးပါက Transaction နံပါတ် ထည့်ပေးပါ။</small>
 </div>
+
 <label>Transaction ID</label>
 <input id="transaction" placeholder="ငွေလွှဲနံပါတ်">
+
 <button type="submit" id="submitBtn">Order တင်မည်</button>
 </form>
 <p id="message" class="notice"></p>
@@ -76,6 +95,40 @@ small{color:#cbd5e1}
 <button id="loginBtn">Admin Login</button>
 <button id="logoutBtn" style="display:none;background:#475569">Logout</button>
 <div id="adminMessage"></div>
+
+<div id="adminPanel" class="adminPanel">
+<hr>
+<h3>💰 ဈေးနှုန်း ပြင်ဆင်ရန်</h3>
+<small>အခြေခံပမာဏနဲ့ ဈေးနှုန်းကို ပြင်ပြီး Save လုပ်ပါ။ Customer ဘက်မှာ ဈေးအသစ် ပြောင်းသွားပါမယ်။</small>
+
+<label>Mobile Legends — Diamond အရေအတွက်</label>
+<input id="mlQty" type="number" min="1">
+
+<label>Mobile Legends — ဈေးနှုန်း (ကျပ်)</label>
+<input id="mlPrice" type="number" min="1">
+
+<hr>
+
+<label>PUBG Mobile — UC အရေအတွက်</label>
+<input id="pubgQty" type="number" min="1">
+
+<label>PUBG Mobile — ဈေးနှုန်း (ကျပ်)</label>
+<input id="pubgPrice" type="number" min="1">
+
+<hr>
+
+<label>Free Fire — Diamond အရေအတွက်</label>
+<input id="ffQty" type="number" min="1">
+
+<label>Free Fire — ဈေးနှုန်း (ကျပ်)</label>
+<input id="ffPrice" type="number" min="1">
+
+<button id="savePrices">ဈေးနှုန်း သိမ်းမည်</button>
+<p id="priceMessage" class="notice"></p>
+</div>
+
+<hr>
+<h3>Order များ</h3>
 <div id="orders"></div>
 </section>
 </main>
@@ -85,7 +138,8 @@ import {initializeApp}
 from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 
 import {
-getFirestore,collection,addDoc,getDocs,query,orderBy
+getFirestore,collection,addDoc,getDocs,query,orderBy,
+doc,getDoc,setDoc
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 import {
@@ -113,6 +167,70 @@ KBZPay:{name:"Yin Yin Aung",number:"09691869813"},
 WavePay:{name:"Su Po Po Aung",number:"09683640259"}
 };
 
+const defaults={
+"Mobile Legends":{baseQty:10,basePrice:1000,unit:"Diamond",packages:[10,50,86,100,172,257,500,1000]},
+"PUBG Mobile":{baseQty:60,basePrice:4300,unit:"UC",packages:[60,120,180,325,660,1800,3850]},
+"Free Fire":{baseQty:100,basePrice:4500,unit:"Diamond",packages:[100,200,310,520,1060,2180]}
+};
+
+let prices=JSON.parse(JSON.stringify(defaults));
+let currentUser=null;
+
+function money(n){
+return Math.round(n).toLocaleString("en-US");
+}
+
+function getPrice(game,qty){
+const p=prices[game];
+if(!p || !qty || qty<1) return 0;
+return Math.round((qty/p.baseQty)*p.basePrice);
+}
+
+function updatePackages(){
+const game=$("game").value;
+const p=prices[game];
+$("unitText").textContent="ယူနစ် — "+p.unit;
+$("pack").innerHTML="";
+
+p.packages.forEach(qty=>{
+const option=document.createElement("option");
+option.value=qty;
+option.textContent=qty+" "+p.unit+" — "+money(getPrice(game,qty))+" ကျပ်";
+$("pack").appendChild(option);
+});
+
+const custom=document.createElement("option");
+custom.value="custom";
+custom.textContent="စိတ်ကြိုက် ပမာဏ";
+$("pack").appendChild(custom);
+
+$("quantity").value="";
+updateTotal();
+}
+
+function updateTotal(){
+const game=$("game").value;
+const selected=$("pack").value;
+let qty=selected==="custom"?Number($("quantity").value):Number(selected);
+
+if(!qty || qty<1){
+$("totalPrice").textContent="0";
+return;
+}
+
+$("totalPrice").textContent=money(getPrice(game,qty));
+}
+
+$("game").addEventListener("change",updatePackages);
+$("pack").addEventListener("change",()=>{
+$("quantity").value="";
+updateTotal();
+});
+$("quantity").addEventListener("input",()=>{
+if($("quantity").value) $("pack").value="custom";
+updateTotal();
+});
+
 function updatePayment(){
 const a=accounts[$("pay").value];
 $("paymentName").textContent=$("pay").value+" — "+a.name;
@@ -120,19 +238,63 @@ $("paymentNumber").textContent="ဖုန်းနံပါတ် — "+a.number
 }
 $("pay").addEventListener("change",updatePayment);
 updatePayment();
+updatePackages();
+
+async function loadPrices(){
+try{
+const snap=await getDoc(doc(db,"settings","pricing"));
+if(snap.exists()){
+const saved=snap.data();
+for(const game of Object.keys(defaults)){
+if(saved[game]){
+prices[game]={
+...defaults[game],
+...saved[game],
+packages:defaults[game].packages
+};
+}
+}
+}
+updatePackages();
+}catch(err){
+console.error("PRICE LOAD ERROR",err);
+}
+}
+
+await loadPrices();
 
 $("orderForm").addEventListener("submit",async e=>{
 e.preventDefault();
+
+const game=$("game").value;
+const selected=$("pack").value;
+const qty=selected==="custom"?Number($("quantity").value):Number(selected);
+
+if(!Number.isSafeInteger(qty)||qty<1){
+$("message").textContent="ဝယ်ယူမည့် ပမာဏ မှန်ကန်စွာ ထည့်ပေးပါ။";
+return;
+}
+
+const total=getPrice(game,qty);
+if(!total){
+$("message").textContent="ဈေးနှုန်း မတွက်နိုင်ပါ။";
+return;
+}
+
 $("submitBtn").disabled=true;
 $("message").textContent="Order သိမ်းဆည်းနေပါသည်...";
 
 try{
 const a=accounts[$("pay").value];
+
 await addDoc(collection(db,"orders"),{
-game:$("game").value,
+game,
 player:$("player").value.trim(),
 server:$("server").value.trim(),
-pack:$("pack").value,
+pack:qty+" "+prices[game].unit,
+quantity:qty,
+unit:prices[game].unit,
+price:total,
 phone:$("phone").value.trim(),
 pay:$("pay").value,
 paymentAccount:a.name,
@@ -144,12 +306,63 @@ at:new Date().toLocaleString()
 $("message").textContent="Order တင်ပြီးပါပြီ။ ဆိုင် Admin မှ စစ်ဆေးပေးပါမည်။";
 $("orderForm").reset();
 updatePayment();
+updatePackages();
 
 }catch(err){
 console.error(err);
 $("message").textContent="Order မအောင်မြင်ပါ။ Internet နှင့် Firebase Rules ကိုစစ်ပါ။";
 }
 $("submitBtn").disabled=false;
+});
+
+function showPriceInputs(){
+$("mlQty").value=prices["Mobile Legends"].baseQty;
+$("mlPrice").value=prices["Mobile Legends"].basePrice;
+$("pubgQty").value=prices["PUBG Mobile"].baseQty;
+$("pubgPrice").value=prices["PUBG Mobile"].basePrice;
+$("ffQty").value=prices["Free Fire"].baseQty;
+$("ffPrice").value=prices["Free Fire"].basePrice;
+}
+
+$("savePrices").addEventListener("click",async()=>{
+const newPrices={
+"Mobile Legends":{
+baseQty:Number($("mlQty").value),
+basePrice:Number($("mlPrice").value)
+},
+"PUBG Mobile":{
+baseQty:Number($("pubgQty").value),
+basePrice:Number($("pubgPrice").value)
+},
+"Free Fire":{
+baseQty:Number($("ffQty").value),
+basePrice:Number($("ffPrice").value)
+}
+};
+
+for(const p of Object.values(newPrices)){
+if(!Number.isSafeInteger(p.baseQty)||p.baseQty<1||
+!Number.isSafeInteger(p.basePrice)||p.basePrice<1){
+$("priceMessage").textContent="ပမာဏနဲ့ ဈေးနှုန်း မှန်ကန်စွာ ထည့်ပါ။";
+return;
+}
+}
+
+$("savePrices").disabled=true;
+$("priceMessage").textContent="သိမ်းဆည်းနေပါသည်...";
+
+try{
+await setDoc(doc(db,"settings","pricing"),newPrices);
+for(const game of Object.keys(newPrices)){
+prices[game]={...prices[game],...newPrices[game]};
+}
+updatePackages();
+$("priceMessage").textContent="ဈေးနှုန်း သိမ်းပြီးပါပြီ။";
+}catch(err){
+console.error(err);
+$("priceMessage").textContent="ဈေးနှုန်း သိမ်းမရပါ။ Firebase Rules ကိုစစ်ပါ။";
+}
+$("savePrices").disabled=false;
 });
 
 $("loginBtn").addEventListener("click",async()=>{
@@ -168,15 +381,19 @@ $("adminMessage").textContent="ဒီ Account မှာ Admin ခွင့်ပ
 return;
 }
 
+currentUser=result.user;
 $("adminMessage").textContent="Admin Login အောင်မြင်ပါသည်။";
 $("loginBtn").style.display="none";
 $("logoutBtn").style.display="block";
+$("adminPanel").style.display="block";
+
+await loadPrices();
+showPriceInputs();
 await loadOrders();
 
 }catch(err){
 console.error("ADMIN LOGIN ERROR:",err);
-$("adminMessage").textContent=
-"Error: "+err.code+" | "+err.message;
+$("adminMessage").textContent="Error: "+err.code+" | "+err.message;
 }
 });
 
@@ -193,8 +410,8 @@ $("orders").textContent="Order မရှိသေးပါ။";
 return;
 }
 
-snapshot.forEach(doc=>{
-const o=doc.data();
+snapshot.forEach(orderDoc=>{
+const o=orderDoc.data();
 const div=document.createElement("div");
 div.className="order";
 
@@ -203,6 +420,8 @@ const details=[
 "Player ID: "+o.player,
 "Server ID: "+o.server,
 "Package: "+o.pack,
+"ပမာဏ: "+(o.quantity||"အဟောင်း Order"),
+"ကျသင့်ငွေ: "+(o.price?money(o.price)+" ကျပ်":"မသတ်မှတ်ထား"),
 "ဖုန်း: "+o.phone,
 "ငွေပေးချေမှု: "+o.pay,
 "အကောင့်: "+o.paymentAccount,
@@ -227,8 +446,10 @@ $("orders").textContent="Order များဖတ်မရပါ။ Firestore Ru
 
 $("logoutBtn").addEventListener("click",async()=>{
 await signOut(auth);
+currentUser=null;
 $("loginBtn").style.display="block";
 $("logoutBtn").style.display="none";
+$("adminPanel").style.display="none";
 $("orders").innerHTML="";
 $("adminMessage").textContent="Logout လုပ်ပြီးပါပြီ။";
 });
