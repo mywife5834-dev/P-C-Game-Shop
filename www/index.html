@@ -174,8 +174,9 @@ $("logoutBtn").style.display="block";
 await loadOrders();
 
 }catch(err){
-console.error(err);
-$("adminMessage").textContent="Login မအောင်မြင်ပါ။ Email/Password စစ်ပါ။";
+console.error("ADMIN LOGIN ERROR:",err);
+$("adminMessage").textContent=
+"Error: "+err.code+" | "+err.message;
 }
 });
 
