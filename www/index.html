@@ -39,36 +39,29 @@ small{color:#cbd5e1}
 <option>PUBG Mobile</option>
 <option>Free Fire</option>
 </select>
-
 <label>Player ID</label>
 <input id="player" required placeholder="Player ID">
-
 <label>Server ID</label>
 <input id="server" placeholder="Server ID">
-
 <label>Top-up Package</label>
 <select id="pack">
 <option>အသေးစား Package</option>
 <option>အလတ်စား Package</option>
 <option>အကြီးစား Package</option>
 </select>
-
 <label>ဆက်သွယ်ရန် ဖုန်းနံပါတ်</label>
 <input id="phone" required inputmode="tel" placeholder="09xxxxxxxxx">
-
 <label>ငွေပေးချေမှု</label>
 <select id="pay">
 <option>KBZPay</option>
 <option>WavePay</option>
 </select>
-
 <div class="card">
 <strong>ငွေလွှဲရန် အကောင့်</strong>
 <p id="paymentName"></p>
 <p id="paymentNumber"></p>
 <small>ငွေလွှဲပြီးပါက Transaction နံပါတ် ထည့်ပေးပါ။</small>
 </div>
-
 <label>Transaction ID</label>
 <input id="transaction" placeholder="ငွေလွှဲနံပါတ်">
 <button type="submit" id="submitBtn">Order တင်မည်</button>
@@ -108,7 +101,7 @@ messagingSenderId:"926323496146",
 appId:"1:926323496146:web:5573d7bd24dfcb81e0c90b"
 };
 
-const ADMIN_UID="wOHjccKNSEP23iM2lMNJCAfrmU23";
+const ADMIN_UID="KEdqj7UwrcMsO15q7h9WszbD2153";
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
