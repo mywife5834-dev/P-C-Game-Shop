@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="my">
 <head>
@@ -24,6 +23,12 @@ small{color:#cbd5e1}
 .price{font-size:23px;color:#4ade80;font-weight:bold;margin:15px 0}
 .adminPanel{display:none}
 hr{border:0;border-top:1px solid #475569;margin:18px 0}
+.packageCard{background:#263449;padding:12px;border-radius:10px;margin:10px 0}
+.packageCard button{width:48%;display:inline-block;margin:5px 1%}
+.editBtn{background:#2563eb}
+.deleteBtn{background:#dc2626}
+.secondary{background:#475569}
+.details{color:#cbd5e1;font-size:14px;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -45,12 +50,13 @@ hr{border:0;border-top:1px solid #475569;margin:18px 0}
 <option value="Free Fire">Free Fire</option>
 </select>
 
-<label>Player ID</label>
-<input id="player" required placeholder="Player ID">
+<label>ဝယ်ယူမည့်အမျိုးအစား</label>
+<select id="purchaseType">
+<option value="quantity">Diamond / UC</option>
+<option value="special">Special Package</option>
+</select>
 
-<label>Server ID</label>
-<input id="server" placeholder="Server ID">
-
+<div id="quantitySection">
 <label>Package ရွေးချယ်ရန်</label>
 <select id="pack"></select>
 
@@ -59,10 +65,25 @@ hr{border:0;border-top:1px solid #475569;margin:18px 0}
 placeholder="ဥပမာ - 100">
 
 <small id="unitText"></small>
+</div>
+
+<div id="specialSection" style="display:none">
+<label>Special Package ရွေးချယ်ရန်</label>
+<select id="specialPackage">
+<option value="">Package ရွေးချယ်ပါ</option>
+</select>
+<div id="specialDetails" class="packageCard" style="display:none"></div>
+</div>
 
 <div class="price">
 ကျသင့်ငွေ — <span id="totalPrice">0</span> ကျပ်
 </div>
+
+<label>Player ID</label>
+<input id="player" required placeholder="Player ID">
+
+<label>Server ID</label>
+<input id="server" placeholder="Server ID">
 
 <label>ဆက်သွယ်ရန် ဖုန်းနံပါတ်</label>
 <input id="phone" required inputmode="tel" placeholder="09xxxxxxxxx">
@@ -99,32 +120,55 @@ placeholder="ဥပမာ - 100">
 <div id="adminPanel" class="adminPanel">
 <hr>
 <h3>💰 ဈေးနှုန်း ပြင်ဆင်ရန်</h3>
-<small>အခြေခံပမာဏနဲ့ ဈေးနှုန်းကို ပြင်ပြီး Save လုပ်ပါ။ Customer ဘက်မှာ ဈေးအသစ် ပြောင်းသွားပါမယ်။</small>
+<small>အခြေခံပမာဏနဲ့ ဈေးနှုန်းကို ပြင်ပြီး Save လုပ်ပါ။</small>
 
 <label>Mobile Legends — Diamond အရေအတွက်</label>
 <input id="mlQty" type="number" min="1">
-
 <label>Mobile Legends — ဈေးနှုန်း (ကျပ်)</label>
 <input id="mlPrice" type="number" min="1">
 
 <hr>
-
 <label>PUBG Mobile — UC အရေအတွက်</label>
 <input id="pubgQty" type="number" min="1">
-
 <label>PUBG Mobile — ဈေးနှုန်း (ကျပ်)</label>
 <input id="pubgPrice" type="number" min="1">
 
 <hr>
-
 <label>Free Fire — Diamond အရေအတွက်</label>
 <input id="ffQty" type="number" min="1">
-
 <label>Free Fire — ဈေးနှုန်း (ကျပ်)</label>
 <input id="ffPrice" type="number" min="1">
 
-<button id="savePrices">ဈေးနှုန်း သိမ်းမည်</button>
+<button id="savePrices" type="button">ဈေးနှုန်း သိမ်းမည်</button>
 <p id="priceMessage" class="notice"></p>
+
+<hr>
+<h3>📦 Special Package စီမံရန်</h3>
+<small>Package အသစ်ထည့်ခြင်း၊ ပြင်ခြင်း၊ ဖျက်ခြင်း ပြုလုပ်နိုင်ပါသည်။</small>
+
+<label>ဂိမ်းရွေးချယ်ရန်</label>
+<select id="adminPackageGame">
+<option value="Mobile Legends">Mobile Legends</option>
+<option value="PUBG Mobile">PUBG Mobile</option>
+<option value="Free Fire">Free Fire</option>
+</select>
+
+<label>Package အမည်</label>
+<input id="packageName" placeholder="ဥပမာ - Weekly Pass">
+
+<label>Package အသေးစိတ်</label>
+<input id="packageDescription" placeholder="ဥပမာ - 7 Days Membership">
+
+<label>ဈေးနှုန်း (ကျပ်)</label>
+<input id="packagePrice" type="number" min="1" placeholder="ဥပမာ - 3500">
+
+<button id="savePackage" type="button">Package ထည့်မည်</button>
+<button id="cancelEdit" type="button" class="secondary" style="display:none">ပြင်ဆင်မှု ပယ်ဖျက်မည်</button>
+<p id="packageMessage" class="notice"></p>
+
+<hr>
+<h3>လက်ရှိ Package များ</h3>
+<div id="adminPackages"></div>
 </div>
 
 <hr>
@@ -174,10 +218,19 @@ const defaults={
 };
 
 let prices=JSON.parse(JSON.stringify(defaults));
-let currentUser=null;
+let specialPackages={
+"Mobile Legends":[],
+"PUBG Mobile":[],
+"Free Fire":[]
+};
+let editingPackageId=null;
 
 function money(n){
 return Math.round(n).toLocaleString("en-US");
+}
+
+function makeId(){
+return Date.now().toString(36)+Math.random().toString(36).slice(2,9);
 }
 
 function getPrice(game,qty){
@@ -208,10 +261,50 @@ $("quantity").value="";
 updateTotal();
 }
 
+function updateSpecialPackages(){
+const game=$("game").value;
+const list=specialPackages[game]||[];
+const select=$("specialPackage");
+
+select.innerHTML="";
+const first=document.createElement("option");
+first.value="";
+first.textContent="Package ရွေးချယ်ပါ";
+select.appendChild(first);
+
+list.forEach(p=>{
+const option=document.createElement("option");
+option.value=p.id;
+option.textContent=p.name+" — "+money(p.price)+" ကျပ်";
+select.appendChild(option);
+});
+
+$("specialDetails").style.display="none";
+$("specialDetails").textContent="";
+updateTotal();
+}
+
 function updateTotal(){
+if($("purchaseType").value==="special"){
+const game=$("game").value;
+const id=$("specialPackage").value;
+const p=(specialPackages[game]||[]).find(x=>x.id===id);
+
+if(!p){
+$("totalPrice").textContent="0";
+$("specialDetails").style.display="none";
+return;
+}
+
+$("totalPrice").textContent=money(p.price);
+$("specialDetails").style.display="block";
+$("specialDetails").textContent=p.description||"အသေးစိတ် မရှိပါ။";
+return;
+}
+
 const game=$("game").value;
 const selected=$("pack").value;
-let qty=selected==="custom"?Number($("quantity").value):Number(selected);
+const qty=selected==="custom"?Number($("quantity").value):Number(selected);
 
 if(!qty || qty<1){
 $("totalPrice").textContent="0";
@@ -221,15 +314,32 @@ return;
 $("totalPrice").textContent=money(getPrice(game,qty));
 }
 
-$("game").addEventListener("change",updatePackages);
+function updatePurchaseType(){
+const special=$("purchaseType").value==="special";
+$("quantitySection").style.display=special?"none":"block";
+$("specialSection").style.display=special?"block":"none";
+if(special) updateSpecialPackages();
+else updateTotal();
+}
+
+$("game").addEventListener("change",()=>{
+updatePackages();
+updateSpecialPackages();
+});
+
+$("purchaseType").addEventListener("change",updatePurchaseType);
+
 $("pack").addEventListener("change",()=>{
 $("quantity").value="";
 updateTotal();
 });
+
 $("quantity").addEventListener("input",()=>{
 if($("quantity").value) $("pack").value="custom";
 updateTotal();
 });
+
+$("specialPackage").addEventListener("change",updateTotal);
 
 function updatePayment(){
 const a=accounts[$("pay").value];
@@ -261,21 +371,77 @@ console.error("PRICE LOAD ERROR",err);
 }
 }
 
+async function loadSpecialPackages(){
+try{
+const snap=await getDoc(doc(db,"settings","packages"));
+if(snap.exists()){
+const saved=snap.data();
+for(const game of Object.keys(defaults)){
+if(Array.isArray(saved[game])){
+specialPackages[game]=saved[game].filter(p=>
+p && typeof p.id==="string" &&
+typeof p.name==="string" &&
+Number.isSafeInteger(Number(p.price))
+).map(p=>({
+id:p.id,
+name:p.name,
+description:p.description||"",
+price:Number(p.price)
+}));
+}
+}
+}
+updateSpecialPackages();
+renderAdminPackages();
+}catch(err){
+console.error("PACKAGE LOAD ERROR",err);
+$("packageMessage").textContent="Package ဖတ်မရပါ။ Internet နဲ့ Firestore Rules ကိုစစ်ပါ။";
+}
+}
+
 await loadPrices();
+await loadSpecialPackages();
 
 $("orderForm").addEventListener("submit",async e=>{
 e.preventDefault();
 
 const game=$("game").value;
+let orderPack="";
+let qty=0;
+let total=0;
+let unit="";
+let packageId="";
+let packageDescription="";
+let purchaseType=$("purchaseType").value;
+
+if(purchaseType==="special"){
+packageId=$("specialPackage").value;
+const selected=(specialPackages[game]||[]).find(p=>p.id===packageId);
+
+if(!selected){
+$("message").textContent="ဝယ်ယူမည့် Package ကို ရွေးချယ်ပါ။";
+return;
+}
+
+orderPack=selected.name;
+qty=1;
+unit="Package";
+total=selected.price;
+packageDescription=selected.description||"";
+}else{
 const selected=$("pack").value;
-const qty=selected==="custom"?Number($("quantity").value):Number(selected);
+qty=selected==="custom"?Number($("quantity").value):Number(selected);
 
 if(!Number.isSafeInteger(qty)||qty<1){
 $("message").textContent="ဝယ်ယူမည့် ပမာဏ မှန်ကန်စွာ ထည့်ပေးပါ။";
 return;
 }
 
-const total=getPrice(game,qty);
+total=getPrice(game,qty);
+unit=prices[game].unit;
+orderPack=qty+" "+unit;
+}
+
 if(!total){
 $("message").textContent="ဈေးနှုန်း မတွက်နိုင်ပါ။";
 return;
@@ -291,10 +457,13 @@ await addDoc(collection(db,"orders"),{
 game,
 player:$("player").value.trim(),
 server:$("server").value.trim(),
-pack:qty+" "+prices[game].unit,
+pack:orderPack,
 quantity:qty,
-unit:prices[game].unit,
+unit,
 price:total,
+purchaseType,
+packageId,
+packageDescription,
 phone:$("phone").value.trim(),
 pay:$("pay").value,
 paymentAccount:a.name,
@@ -307,6 +476,8 @@ $("message").textContent="Order တင်ပြီးပါပြီ။ ဆိ�
 $("orderForm").reset();
 updatePayment();
 updatePackages();
+updateSpecialPackages();
+updatePurchaseType();
 
 }catch(err){
 console.error(err);
@@ -365,6 +536,150 @@ $("priceMessage").textContent="ဈေးနှုန်း သိမ်းမရ
 $("savePrices").disabled=false;
 });
 
+function resetPackageForm(){
+editingPackageId=null;
+$("packageName").value="";
+$("packageDescription").value="";
+$("packagePrice").value="";
+$("savePackage").textContent="Package ထည့်မည်";
+$("cancelEdit").style.display="none";
+}
+
+function renderAdminPackages(){
+const game=$("adminPackageGame").value;
+const list=specialPackages[game]||[];
+const container=$("adminPackages");
+container.innerHTML="";
+
+if(list.length===0){
+container.textContent="ဒီဂိမ်းအတွက် Package မရှိသေးပါ။";
+return;
+}
+
+list.forEach(p=>{
+const card=document.createElement("div");
+card.className="packageCard";
+
+const name=document.createElement("strong");
+name.textContent=p.name;
+
+const description=document.createElement("p");
+description.className="details";
+description.textContent=p.description||"အသေးစိတ် မရှိပါ။";
+
+const price=document.createElement("p");
+price.textContent=money(p.price)+" ကျပ်";
+
+const edit=document.createElement("button");
+edit.type="button";
+edit.className="editBtn";
+edit.textContent="ပြင်မည်";
+edit.addEventListener("click",()=>{
+editingPackageId=p.id;
+$("packageName").value=p.name;
+$("packageDescription").value=p.description;
+$("packagePrice").value=p.price;
+$("savePackage").textContent="ပြင်ဆင်ပြီး သိမ်းမည်";
+$("cancelEdit").style.display="block";
+$("packageMessage").textContent="Package ကို ပြင်ဆင်နိုင်ပါပြီ။";
+});
+
+const del=document.createElement("button");
+del.type="button";
+del.className="deleteBtn";
+del.textContent="ဖျက်မည်";
+del.addEventListener("click",async()=>{
+if(!confirm("ဒီ Package ကို ဖျက်မှာ သေချာပါသလား။")) return;
+
+const oldList=[...specialPackages[game]];
+specialPackages[game]=oldList.filter(x=>x.id!==p.id);
+
+try{
+await saveAllPackages();
+renderAdminPackages();
+updateSpecialPackages();
+$("packageMessage").textContent="Package ဖျက်ပြီးပါပြီ။";
+if(editingPackageId===p.id) resetPackageForm();
+}catch(err){
+specialPackages[game]=oldList;
+console.error(err);
+$("packageMessage").textContent="ဖျက်မရပါ။ Firebase Rules ကိုစစ်ပါ။";
+}
+});
+
+card.append(name,description,price,edit,del);
+container.appendChild(card);
+});
+}
+
+async function saveAllPackages(){
+await setDoc(doc(db,"settings","packages"),specialPackages);
+}
+
+$("adminPackageGame").addEventListener("change",()=>{
+resetPackageForm();
+renderAdminPackages();
+});
+
+$("savePackage").addEventListener("click",async()=>{
+const game=$("adminPackageGame").value;
+const name=$("packageName").value.trim();
+const description=$("packageDescription").value.trim();
+const price=Number($("packagePrice").value);
+
+if(!name){
+$("packageMessage").textContent="Package အမည် ထည့်ပေးပါ။";
+return;
+}
+
+if(!Number.isSafeInteger(price)||price<1){
+$("packageMessage").textContent="ဈေးနှုန်း မှန်ကန်စွာ ထည့်ပေးပါ။";
+return;
+}
+
+const oldList=[...specialPackages[game]];
+
+if(editingPackageId){
+const index=specialPackages[game].findIndex(p=>p.id===editingPackageId);
+if(index<0){
+$("packageMessage").textContent="ပြင်ဆင်မည့် Package မတွေ့ပါ။";
+return;
+}
+
+specialPackages[game][index]={
+id:editingPackageId,
+name,
+description,
+price
+};
+}else{
+specialPackages[game].push({
+id:makeId(),
+name,
+description,
+price
+});
+}
+
+$("savePackage").disabled=true;
+$("packageMessage").textContent="သိမ်းဆည်းနေပါသည်...";
+
+try{
+await saveAllPackages();
+resetPackageForm();
+renderAdminPackages();
+updateSpecialPackages();
+$("packageMessage").textContent="Package သိမ်းပြီးပါပြီ။ Customer ဘက်မှာလည်း ပေါ်လာပါပြီ။";
+}catch(err){
+specialPackages[game]=oldList;
+console.error(err);
+$("packageMessage").textContent="သိမ်းမရပါ။ Firebase Rules နဲ့ Internet ကိုစစ်ပါ။";
+}
+$("savePackage").disabled=false;
+});
+
+$("cancelEdit").addEventListener("click",resetPackageForm);
+
 $("loginBtn").addEventListener("click",async()=>{
 $("adminMessage").textContent="Login ဝင်နေပါသည်...";
 
@@ -381,13 +696,13 @@ $("adminMessage").textContent="ဒီ Account မှာ Admin ခွင့်ပ
 return;
 }
 
-currentUser=result.user;
 $("adminMessage").textContent="Admin Login အောင်မြင်ပါသည်။";
 $("loginBtn").style.display="none";
 $("logoutBtn").style.display="block";
 $("adminPanel").style.display="block";
 
 await loadPrices();
+await loadSpecialPackages();
 showPriceInputs();
 await loadOrders();
 
@@ -446,7 +761,6 @@ $("orders").textContent="Order များဖတ်မရပါ။ Firestore Ru
 
 $("logoutBtn").addEventListener("click",async()=>{
 await signOut(auth);
-currentUser=null;
 $("loginBtn").style.display="block";
 $("logoutBtn").style.display="none";
 $("adminPanel").style.display="none";
